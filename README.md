@@ -20,6 +20,7 @@ pip install -U --pre triton
 
 ```sh
 CUDA_VISIBLE_DEVICES=0 python3.7 sample_multi_v1.py --mode=t2i --prompt="an elephant under the sea"
+CUDA_VISIBLE_DEVICES=0 python3.7 sample_multi_v1.py --mode=t2i --prompt="an astronaut riding on a horse on mars"
 CUDA_VISIBLE_DEVICES=0 python3.7 sample_multi_v1.py --mode=i2t --img=assets/space.jpg
 
 CUDA_VISIBLE_DEVICES=1 python3.7 sample_multi_v1.py --mode=i
@@ -28,6 +29,7 @@ CUDA_VISIBLE_DEVICES=1 python3.7 sample_multi_v1.py --mode=joint
 
 CUDA_VISIBLE_DEVICES=2 python3.7 sample_multi_v1.py --mode=i2t2i --img=assets/space.jpg
 CUDA_VISIBLE_DEVICES=2 python3.7 sample_multi_v1.py --mode=t2i2t --prompt="an elephant under the sea"
+CUDA_VISIBLE_DEVICES=2 python3.7 sample_multi_v1.py --mode=t2i2t --prompt="an astronaut riding on a horse on mars"
 ```
 
 

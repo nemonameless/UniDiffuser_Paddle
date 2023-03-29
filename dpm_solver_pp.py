@@ -3,6 +3,13 @@ import paddle.nn.functional as F
 import math
 
 
+def logaddexp(x, y):
+    # return paddle.log(x.exp() + y.exp())
+    return paddle.log(
+        1 + paddle.exp(paddle.minimum(x, y) - paddle.maximum(x, y))
+    ) + paddle.maximum(x, y)
+
+
 def interpolate_fn(x: paddle.Tensor, xp: paddle.Tensor, yp: paddle.Tensor) ->paddle.Tensor:
     """Performs piecewise linear interpolation for x, using xp and yp keypoints (knots).
     Performs separate interpolation for each channel.
@@ -153,16 +160,15 @@ class NoiseScheduleVP:
         Compute the continuous-time label t in [0, T] of a given half-logSNR lambda_t.
         """
         if self.schedule == 'linear':
-            tmp = 2. * (self.beta_1 - self.beta_0) * paddle.logaddexp(-2. * lamb, paddle.zeros((1,)))
+            tmp = 2. * (self.beta_1 - self.beta_0) * logaddexp(-2. * lamb, paddle.zeros((1,)))
             Delta = self.beta_0**2 + tmp
             return tmp / (paddle.sqrt(Delta) + self.beta_0) / (self.beta_1 - self.beta_0)
         if self.schedule == 'discrete':
-            # log_alpha = -0.5 * paddle.logaddexp(paddle.zeros((1,)), -2. * lamb)
-            log_alpha = -0.5 * paddle.log(paddle.exp(paddle.zeros((1,))) + paddle.exp(-2. * lamb))
+            log_alpha = -0.5 * logaddexp(paddle.zeros((1,)), -2. * lamb)
             t = interpolate_fn(log_alpha.reshape((-1, 1)), paddle.flip(self.log_alpha_discrete.clone(), [1]), paddle.flip(self.t_discrete.clone(), [1]))
             return t.reshape((-1,))
         else:
-            log_alpha = -0.5 * paddle.logaddexp(-2. * lamb, paddle.zeros((1,)))
+            log_alpha = -0.5 * logaddexp(-2. * lamb, paddle.zeros((1,)))
             t_fn = lambda log_alpha_t: paddle.arccos(paddle.exp(log_alpha_t + self.cosine_log_alpha_0)) * 2. * (1. + self.cosine_s) / math.pi - self.cosine_s
             t = t_fn(log_alpha)
             return t
