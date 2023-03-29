@@ -5,22 +5,13 @@ from paddle import nn
 from paddle.nn import functional as F
 
 from paddlenlp.transformers import GPTTokenizer, GPTLMHeadModel
-# from transformers import GPT2Tokenizer, GPT2LMHeadModel
-# from transformers import default_data_collator
-# from transformers import EarlyStoppingCallback
 
-# data_collator = default_data_collator
-# es = EarlyStoppingCallback(early_stopping_patience=5)
-import json
-import argparse
 from typing import Union, Optional
 from collections import OrderedDict
 
 
 # %% model initial
 class ClipCaptionModel(nn.Layer):
-    """
-    """
 
     def __init__(self, prefix_length: int, hidden_dim=None):
         super(ClipCaptionModel, self).__init__()
@@ -92,10 +83,8 @@ def generate_beam(
                 tokens = paddle.to_tensor(tokenizer.encode(prompt)['input_ids'])
                 tokens = tokens.unsqueeze(0)
                 generated = model.gpt.gpt.embeddings.word_embeddings(tokens)
-        # pbar = tqdm(range(entry_length))
-        # pbar.set_description("generating text ...")
+
         for i in range(entry_length):
-            # print(generated.shape)
             model.gpt.lm_head.decoder_weight = model.gpt.embeddings.word_embeddings.weight
             logits = model.gpt(inputs_embeds=generated)
             logits = logits[:, -1, :] / (temperature if temperature > 0 else 1.0)
@@ -225,7 +214,6 @@ class CaptionDecoder(object):
         # model initialize
         feature_length = 77
         self.caption_model = ClipCaptionModel(feature_length, hidden_dim=hidden_dim)
-        # print("Load Model...")
         ckpt = paddle.load(pretrained_path)
         state_dict = OrderedDict()
         for k, v in ckpt.items():

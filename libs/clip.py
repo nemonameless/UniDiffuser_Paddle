@@ -8,19 +8,15 @@ class FrozenCLIPEmbedder(nn.Layer):
         super().__init__()
         self.tokenizer = CLIPTokenizer.from_pretrained(version)
         self.transformer = CLIPTextModel.from_pretrained(version)
-        self.version = version
         self.max_length = max_length
         self.freeze()
 
     def freeze(self):
-        self.transformer = self.transformer.eval()
+        self.transformer.eval()
         for param in self.parameters():
             param.stop_gradient = True
 
     def forward(self, text):
-        version="openai/clip-vit-large-patch14"
-        self.tokenizer = CLIPTokenizer.from_pretrained(version)
-        self.transformer = CLIPTextModel.from_pretrained(version)
         batch_encoding = self.tokenizer(text, truncation=True, max_length=self.max_length, return_length=True,
                                         return_overflowing_tokens=False, padding="max_length", return_tensors="pd")
         tokens = batch_encoding["input_ids"]
