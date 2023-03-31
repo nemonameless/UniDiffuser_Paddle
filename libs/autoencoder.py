@@ -312,7 +312,6 @@ class Decoder(nn.Layer):
         self.temb_ch = 0
         self.num_resolutions = len(ch_mult)
         self.num_res_blocks = num_res_blocks
-        self.resolution = resolution
         self.in_channels = in_channels
         self.give_pre_end = give_pre_end
         self.tanh_out = tanh_out
@@ -420,7 +419,6 @@ class FrozenAutoencoderKL(nn.Layer):
         assert ddconfig["double_z"]
         self.quant_conv = nn.Conv2D(2 * ddconfig["z_channels"], 2 * embed_dim, 1)
         self.post_quant_conv = nn.Conv2D(embed_dim, ddconfig["z_channels"], 1)
-        self.embed_dim = embed_dim
         self.scale_factor = scale_factor
         self.set_state_dict(paddle.load(pretrained_path))
         self.eval()

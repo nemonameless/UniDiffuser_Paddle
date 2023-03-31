@@ -80,11 +80,9 @@ def unpreprocess(v):  # to B C H W and [0, 1]
     v.clip_(0., 1.)
     return v
 
-
 def set_seed(seed: int):
     random.seed(seed)
     np.random.seed(seed)
-
 
 def evaluate(config):
     if config.get('benchmark', False):
@@ -120,8 +118,6 @@ def evaluate(config):
     clip_img_model = CLIPModel.from_pretrained(model_name)
     clip_img_model_preprocess = CLIPProcessor.from_pretrained(model_name)
 
-    empty_context = clip_text_model.encode([''])[0]
-
     def split(x):
         C, H, W = config.z_shape
         z_dim = C * H * W
@@ -146,9 +142,7 @@ def evaluate(config):
         3. return linear combination of conditional output and unconditional output
         """
         z, clip_img = split(x)
-
         t_text = paddle.zeros([timesteps.shape[0]], dtype=paddle.int32)
-
         z_out, clip_img_out, text_out = nnet(z, clip_img, text=text, t_img=timesteps, t_text=t_text,
                                              data_type=paddle.zeros_like(t_text, dtype=paddle.int32) + config.data_type)
         x_out = combine(z_out, clip_img_out)
@@ -156,14 +150,7 @@ def evaluate(config):
         if config.sample.scale == 0.:
             return x_out
 
-        if config.sample.t2i_cfg_mode == 'empty_token':
-            _empty_context = einops.repeat(empty_context, 'L D -> B L D', B=x.shape[0])
-            if use_caption_decoder:
-                _empty_context = caption_decoder.encode_prefix(_empty_context)
-            z_out_uncond, clip_img_out_uncond, text_out_uncond = nnet(z, clip_img, text=_empty_context, t_img=timesteps, t_text=t_text,
-                                                                      data_type=paddle.zeros_like(t_text, dtype=paddle.int32) + config.data_type)
-            x_out_uncond = combine(z_out_uncond, clip_img_out_uncond)
-        elif config.sample.t2i_cfg_mode == 'true_uncond':
+        if config.sample.t2i_cfg_mode == 'true_uncond':
             text_N = paddle.randn(text.shape)  # 3 other possible choices
             z_out_uncond, clip_img_out_uncond, text_out_uncond = nnet(z, clip_img, text=text_N, t_img=timesteps, t_text=paddle.ones_like(timesteps) * N,
                                                                       data_type=paddle.zeros_like(t_text, dtype=paddle.int32) + config.data_type)
@@ -172,7 +159,6 @@ def evaluate(config):
             raise NotImplementedError
 
         return x_out + config.sample.scale * (x_out - x_out_uncond)
-
 
     def i_nnet(x, timesteps):
         z, clip_img = split(x)
@@ -278,7 +264,6 @@ def evaluate(config):
 
 
     def sample_fn(mode, **kwargs):
-
         _z_init = paddle.randn([_n_samples, *config.z_shape])
         _clip_img_init = paddle.randn([_n_samples, 1, config.clip_img_dim])
         _text_init = paddle.randn([_n_samples, 77, config.text_dim])

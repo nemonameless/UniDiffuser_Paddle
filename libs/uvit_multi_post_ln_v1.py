@@ -93,11 +93,6 @@ def timestep_embedding(timesteps, dim, max_period=10000):
     return embedding
 
 
-def patchify(imgs, patch_size):
-    x = einops.rearrange(imgs, 'B C (h p1) (w p2) -> B (h w) (p1 p2 C)', p1=patch_size, p2=patch_size)
-    return x
-
-
 def unpatchify(x, in_chans):
     patch_size = int((x.shape[2] // in_chans) ** 0.5)
     h = w = int(x.shape[1] ** .5)
@@ -287,13 +282,11 @@ class UViT(nn.Layer):
             zeros_(m.bias)
             ones_(m.weight)
 
-
     def no_weight_decay(self):
         return {'pos_embed'}
 
     def forward(self, img, clip_img, text, t_img, t_text, data_type):
         _, _, H, W = img.shape
-
         img = self.patch_embed(img)
 
         t_img_token = self.time_img_embed(timestep_embedding(t_img, self.embed_dim))
@@ -339,8 +332,7 @@ class UViT(nn.Layer):
 
         img_out = self.decoder_pred(img_out)
         img_out = unpatchify(img_out, self.in_chans)
-
         clip_img_out = self.clip_img_out(clip_img_out)
-
         text_out = self.text_out(text_out)
+
         return img_out, clip_img_out, text_out

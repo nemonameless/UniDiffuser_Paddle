@@ -1,4 +1,3 @@
-import os
 import numpy as np
 import paddle
 from paddle import nn
@@ -6,11 +5,10 @@ from paddle.nn import functional as F
 
 from paddlenlp.transformers import GPTTokenizer, GPTLMHeadModel
 
-from typing import Union, Optional
+from typing import Optional
 from collections import OrderedDict
 
 
-# %% model initial
 class ClipCaptionModel(nn.Layer):
 
     def __init__(self, prefix_length: int, hidden_dim=None):
@@ -212,8 +210,8 @@ class CaptionDecoder(object):
         self.tokenizer.add_special_tokens(special_tokens_dict)
 
         # model initialize
-        feature_length = 77
-        self.caption_model = ClipCaptionModel(feature_length, hidden_dim=hidden_dim)
+        self.caption_model = ClipCaptionModel(prefix_length=77, hidden_dim=hidden_dim)
+
         ckpt = paddle.load(pretrained_path)
         state_dict = OrderedDict()
         for k, v in ckpt.items():
@@ -232,7 +230,6 @@ class CaptionDecoder(object):
         : param features : (tensor([B x L x D]))
         : return generated_text: (list([L]))
         """
-
         # generate config
         use_beam_search = True
 

@@ -247,7 +247,7 @@ def model_wrapper(model, noise_schedule=None, is_cond_classifier=False, classifi
             return t_continuous
         elif time_input_type == '1':
             # Type-1 discrete label, as detailed in the Appendix of DPM-Solver.
-            return 1000. * paddle.max(t_continuous - 1. / total_N, paddle.zeros_like(t_continuous).to(t_continuous))
+            return 1000. * paddle.maximum(t_continuous - 1. / total_N, paddle.zeros_like(t_continuous))
         elif time_input_type == '2':
             # Type-2 discrete label, as detailed in the Appendix of DPM-Solver.
             max_N = (total_N - 1) / total_N * 1000.
@@ -532,7 +532,6 @@ class DPM_Solver:
         else:
             return x_t
 
-
     def dpm_multistep_second_update(self, x, noise_prev_list, t_prev_list, t, solver_type="dpm_solver"):
         ns = self.noise_schedule
         dims = len(x.shape) - 1
@@ -569,7 +568,6 @@ class DPM_Solver:
                 (None,) * dims] * noise_prev_0 - 0.5 * (sigma_t * (paddle.
                 exp(h) - 1.0))[(...,) + (None,) * dims] * D1_0
         return x_t
-
 
     def dpm_multistep_third_update(self, x, noise_prev_list, t_prev_list, t, solver_type='dpm_solver'):
         ns = self.noise_schedule
@@ -788,10 +786,10 @@ class DPM_Solver:
         [1] A. Jolicoeur-Martineau, K. Li, R. Piché-Taillefer, T. Kachman, and I. Mitliagkas, "Gotta go fast when generating data with score-based models," arXiv preprint arXiv:2105.14080, 2021.
         """
         ns = self.noise_schedule
-        s = t_T * paddle.ones((x.shape[0],)).to(x)
+        s = t_T * paddle.ones((x.shape[0],))
         lambda_s = ns.marginal_lambda(s)
-        lambda_0 = ns.marginal_lambda(t_0 * paddle.ones_like(s).to(x))
-        h = h_init * paddle.ones_like(s).to(x)
+        lambda_0 = ns.marginal_lambda(t_0 * paddle.ones_like(s))
+        h = h_init * paddle.ones_like(s)
         x_prev = x
         nfe = 0
         if order == 2:
@@ -808,7 +806,7 @@ class DPM_Solver:
             t = ns.inverse_lambda(lambda_s + h)
             x_lower, lower_noise_kwargs = lower_update(x, s, t)
             x_higher = higher_update(x, s, t, **lower_noise_kwargs)
-            delta = paddle.max(paddle.ones_like(x).to(x) * atol, rtol * paddle.max(paddle.abs(x_lower), paddle.abs(x_prev)))
+            delta = paddle.maximum(paddle.ones_like(x) * atol, rtol * paddle.maximum(paddle.abs(x_lower), paddle.abs(x_prev)))
             norm_fn = lambda v: paddle.sqrt(paddle.square(v.reshape((v.shape[0], -1))).mean(axis=-1, keepdim=True))
             E = norm_fn((x_higher - x_lower) / delta).max()
             if paddle.all(E <= 1.):
@@ -816,7 +814,7 @@ class DPM_Solver:
                 s = t
                 x_prev = x_lower
                 lambda_s = ns.marginal_lambda(s)
-            h = paddle.min(theta * h * paddle.float_power(E, -1. / order), lambda_0 - lambda_s)
+            h = paddle.minimum(theta * h * paddle.pow(E, -1. / order), lambda_0 - lambda_s)
             nfe += order
         print('adaptive solver nfe', nfe)
         return x
@@ -890,20 +888,19 @@ class DPM_Solver:
                 x = self.dpm_solver_adaptive(x, order=order, t_T=t_T, t_0=t_0, atol=atol, rtol=rtol, solver_type=solver_type)
         elif method == 'multistep':
             assert steps >= order
-            if timesteps is None:
-                timesteps = self.get_time_steps(skip_type=skip_type, t_T=t_T, t_0=t_0, N=steps)
+            timesteps = self.get_time_steps(skip_type=skip_type, t_T=t_T, t_0=t_0, N=steps)
             assert timesteps.shape[0] - 1 == steps
             with paddle.no_grad():
-                vec_t = timesteps[0].expand(x.shape[0])
+                vec_t = timesteps[0].expand([x.shape[0]])
                 noise_prev_list = [self.model_fn(x, vec_t)]
                 t_prev_list = [vec_t]
                 for init_order in range(1, order):
-                    vec_t = timesteps[init_order].expand(x.shape[0])
+                    vec_t = timesteps[init_order].expand([x.shape[0]])
                     x = self.dpm_multistep_update(x, noise_prev_list, t_prev_list, vec_t, init_order, solver_type=solver_type)
                     noise_prev_list.append(self.model_fn(x, vec_t))
                     t_prev_list.append(vec_t)
                 for step in range(order, steps + 1):
-                    vec_t = timesteps[step].expand(x.shape[0])
+                    vec_t = timesteps[step].expand([x.shape[0]])
                     x = self.dpm_multistep_update(x, noise_prev_list, t_prev_list, vec_t, order, solver_type=solver_type)
                     for i in range(order - 1):
                         t_prev_list[i] = t_prev_list[i + 1]
@@ -926,7 +923,7 @@ class DPM_Solver:
         elif method == 'singlestep':
             N_steps = steps // order
             orders = [order] * N_steps
-            timesteps = self.get_time_steps(skip_type=skip_type, t_T=t_T,t_0=t_0, N=N_steps)
+            timesteps = self.get_time_steps(skip_type=skip_type, t_T=t_T, t_0=t_0, N=N_steps)
             assert len(timesteps) - 1 == N_steps
             with paddle.no_grad():
                 for i, order in enumerate(orders):
