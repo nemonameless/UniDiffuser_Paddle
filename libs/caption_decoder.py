@@ -4,6 +4,7 @@ from paddle import nn
 from paddle.nn import functional as F
 
 from paddlenlp.transformers import GPTTokenizer, GPTLMHeadModel
+from paddlenlp.transformers import GPTConfig
 
 from typing import Optional
 from collections import OrderedDict
@@ -18,8 +19,8 @@ class ClipCaptionModel(nn.Layer):
         special_tokens_dict = {'eos_token': eos}
         base_tokenizer = GPTTokenizer.from_pretrained('gpt2-en')
         base_tokenizer.add_special_tokens(special_tokens_dict)
-        self.gpt = GPTLMHeadModel.from_pretrained('gpt2-en', eos_token_id=base_tokenizer.eos_token_id)
-        self.gpt.resize_token_embeddings(len(base_tokenizer))
+        config = GPTConfig.from_pretrained('gpt2-en', vocab_size=len(base_tokenizer), eos_token_id=base_tokenizer.eos_token_id)
+        self.gpt = GPTLMHeadModel(config)
 
         self.hidden_dim = hidden_dim
         self.encode_prefix = nn.Linear(768, hidden_dim) if hidden_dim is not None else nn.Identity()
@@ -83,7 +84,6 @@ def generate_beam(
                 generated = model.gpt.gpt.embeddings.word_embeddings(tokens)
 
         for i in range(entry_length):
-            model.gpt.lm_head.decoder_weight = model.gpt.embeddings.word_embeddings.weight
             logits = model.gpt(inputs_embeds=generated)
             logits = logits[:, -1, :] / (temperature if temperature > 0 else 1.0)
             logits = F.softmax(logits, axis=-1).log()
@@ -166,7 +166,6 @@ def generate2(
                 generated = model.gpt.gpt.embeddings.word_embeddings(tokens)
 
             for i in range(entry_length):
-                model.gpt.lm_head.decoder_weight = model.gpt.embeddings.word_embeddings.weight
                 logits = model.gpt(inputs_embeds=generated)
                 logits = logits[:, -1, :] / (temperature if temperature > 0 else 1.0)
                 sorted_logits = paddle.sort(logits, descending=True)
